@@ -1,5 +1,6 @@
 package edu.sjsu.cmpe.dropbox.api.resources;
 
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -7,6 +8,16 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.mongodb.MongoClient;
+import com.mongodb.MongoException;
+import com.mongodb.WriteConcern;
+import com.mongodb.DB;
+import com.mongodb.DBCollection;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import com.mongodb.DBCursor;
+import com.mongodb.ServerAddress;
+import com.mongodb.util.JSON;
 import com.yammer.metrics.annotation.Timed;
 
 import edu.sjsu.cmpe.dropbox.domain.File;
@@ -19,15 +30,28 @@ import edu.sjsu.cmpe.dropbox.dto.LinkDto;
 import edu.sjsu.cmpe.dropbox.dto.LinksDto;
 import edu.sjsu.cmpe.dropbox.dto.FileDto;
 import edu.sjsu.cmpe.dropbox.dto.FilesDto;
+import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
+
 
 	@Path("/v1/users")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public class DropboxResource {
 		private static HashMap<String,User> users=new HashMap<String,User>();
-//		private static Long isbn = new Long(1);
+		private MongoClient mongoClient;
+		private DB db;
+		private DBCollection colluser,colldocument;
+		
 	    public DropboxResource() {
-		// do nothing
+	    	try {
+				mongoClient = new MongoClient( "localhost" , 27017 );
+			} catch (UnknownHostException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	    	db = mongoClient.getDB( "test" );
+	    	colluser = db.getCollection("user");
+	    	colldocument = db.getCollection("document");
 	    }
 
     @GET
@@ -61,6 +85,15 @@ import edu.sjsu.cmpe.dropbox.dto.FilesDto;
 	// FIXME - Dummy code
 
     	users.put(user.getEmail(), user);
+    	BasicDBObject ob = new BasicDBObject();
+    	ob.append("firstName", user.getFirstName());
+    	ob.append("lastName", user.getLastName());
+    	ob.append("password", user.getPassword());
+    	ob.append("email", user.getPassword());
+    	ob.append("status", user.getStatus());
+    	ob.append("designation", user.getDesignation());
+
+    	colluser.insert(ob);
     	
     	LinksDto links = new LinksDto();
     	links.addLink(new LinkDto("view-user", "/users/" + user.getEmail(),
@@ -115,12 +148,25 @@ import edu.sjsu.cmpe.dropbox.dto.FilesDto;
     @Timed(name = "create-file")
     public Response createUserFileByEmail(@PathParam("email") String email, File file) {
 	// FIXME - Dummy code
+    	User user = users.get(email);
     	users.get(email).getmyFiles().add(file);
+    	BasicDBObject ob = new BasicDBObject();
+    	ob.append("name", file.getName());
+    	ob.append("owner ", file.getOwner());
+    	ob.append("accessType", file.getAccessType());
+    	colldocument.insert(ob);
+    	BasicDBObject query = new BasicDBObject("email", email);
+    	DBCursor cursor ;
+    	cursor = colldocument.find(query);
+    
+    	colldocument.update((DBObject)JSON.parse("{'name':'file1'}") ,  (DBObject)JSON.parse("{'$set' : { 'name':'fil21'}}") );
+    	
+//    	BasicDBObject query = new BasicDBObject("email", email);
+//    	query.append("myFiles", new BasicDBObject("fileID", user.getmyFiles().size()+1).append("owner", user.getmyFiles().get(1).getOwner()))
     	LinkDto link = new LinkDto("view-file", "/users/" + email + "/files/ " + file.getFileID(),"GET");
-
     	return Response.status(201).entity(link).build();
     }
-      
+    
     @GET
     @Path("/{email}/files/{id}")
     @Timed(name = "view-file")
@@ -133,6 +179,15 @@ import edu.sjsu.cmpe.dropbox.dto.FilesDto;
 	// add more links
 	return fileResponse;
     }
+    
+    @DELETE
+    @Path("/{email}/files/{id}")
+    @Timed(name = "delete-file")
+    public LinkDto deleteFileByEmailAndId(@PathParam("email") String email, @PathParam("id") Integer id) {
+	// FIXME - Dummy code
+    	users.get(email).getmyFiles().remove(id);
+    	return new LinkDto("create-file", "/users/" + email,"POST");
+    }   
     
     @GET
     @Path("/{email}/files")
@@ -168,6 +223,16 @@ import edu.sjsu.cmpe.dropbox.dto.FilesDto;
 	// add more links
 	return fileResponse;
     }
+    
+    @DELETE
+    @Path("/{email}/filesShared/{id}")
+    @Timed(name = "delete-fileShared")
+    public LinkDto deleteFileSharedByEmailAndId(@PathParam("email") String email, @PathParam("id") Integer id) {
+	// FIXME - Dummy code
+    	users.get(email).getFilesShared().remove(id);
+    	return new LinkDto("create-fileShared", "/users/" + email + "/filesShared/","POST");
+    }   
+    
     @GET
     @Path("/{email}/filesShared")
     @Timed(name = "view-all-filesShared")

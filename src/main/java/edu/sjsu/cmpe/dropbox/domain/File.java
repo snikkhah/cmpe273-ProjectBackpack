@@ -1,5 +1,5 @@
 package edu.sjsu.cmpe.dropbox.domain;
-
+ 	
 import java.util.ArrayList;
 
 public class File {
