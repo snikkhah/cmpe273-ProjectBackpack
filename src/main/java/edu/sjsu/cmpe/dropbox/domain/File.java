@@ -3,7 +3,7 @@ package edu.sjsu.cmpe.dropbox.domain;
 import java.util.ArrayList;
 
 public class File {
-	private Long fileID;
+	private int fileID;
 	private String name;
 	private String owner;
 	private String accessType;
@@ -15,10 +15,10 @@ public class File {
 		setAccessType("private");
 		setUpdate(false);
 	}
-	public Long getFileID() {
+	public int getFileID() {
 		return fileID;
 	}
-	public void setFileID(Long fileID) {
+	public void setFileID(int fileID) {
 		this.fileID = fileID;
 	}
 	public String getName() {

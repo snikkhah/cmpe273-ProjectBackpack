@@ -1,2 +1,12 @@
 to do:
 Delete file or shared file
+***********
+    @PUT
+    @Path("/{email}")
+***********
+    @DELETE
+    @Path("/{email}/files/{id}")
+***********
+    @DELETE
+    @Path("/{email}/filesShared/{id}")
+***********

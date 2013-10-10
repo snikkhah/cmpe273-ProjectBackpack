@@ -3,34 +3,27 @@ package edu.sjsu.cmpe.dropbox.api.resources;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.mongodb.MongoClient;
-import com.mongodb.MongoException;
-import com.mongodb.WriteConcern;
 import com.mongodb.DB;
 import com.mongodb.DBCollection;
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBObject;
 import com.mongodb.DBCursor;
-import com.mongodb.ServerAddress;
-import com.mongodb.util.JSON;
 import com.yammer.metrics.annotation.Timed;
 
 import edu.sjsu.cmpe.dropbox.domain.File;
 import edu.sjsu.cmpe.dropbox.domain.User;
-import edu.sjsu.cmpe.dropbox.domain.Review;
-import edu.sjsu.cmpe.dropbox.dto.AuthorDto;
-import edu.sjsu.cmpe.dropbox.dto.AuthorsDto;
 import edu.sjsu.cmpe.dropbox.dto.UserDto;
 import edu.sjsu.cmpe.dropbox.dto.LinkDto;
 import edu.sjsu.cmpe.dropbox.dto.LinksDto;
 import edu.sjsu.cmpe.dropbox.dto.FileDto;
 import edu.sjsu.cmpe.dropbox.dto.FilesDto;
-import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
 
 
 	@Path("/v1/users")
@@ -38,6 +31,7 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
 	@Consumes(MediaType.APPLICATION_JSON)
 	public class DropboxResource {
 		private static HashMap<String,User> users=new HashMap<String,User>();
+		private static int fileNum =1;
 		private MongoClient mongoClient;
 		private DB db;
 		private DBCollection colluser,colldocument;
@@ -57,9 +51,9 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     @GET
     @Path("/{email}")
     @Timed(name = "view-user")
-    public User getUserByEmail(@PathParam("email") String email) {
+    public Response getUserByEmail(@PathParam("email") String email) {
 	// FIXME - Dummy code	
-	User user = new User();
+/*	User user = new User();
 	user=users.get(email);
 	UserDto userResponse = new UserDto(user);
 	userResponse.addLink(new LinkDto("view-user", "/users/" + email,
@@ -73,9 +67,16 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     	if (user.getmyFiles().size()>0){
     	userResponse.addLink(new LinkDto("view-all-files",
         		"/users/" + email + "/files", "GET"));
-   	}
+   	}*/
+    	DBCursor cursor = colluser.find(new BasicDBObject().append("email",email));
+    	String output = "";
+    	while(cursor.hasNext()) {
+    	    output +=cursor.next();
+    	}
+
+    	return Response.status(200).entity(output).build();
  	// add more links
-	return user;
+//	return user;
     }
     
     
@@ -84,15 +85,16 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     public Response setUserByEmail(User user) {
 	// FIXME - Dummy code
 
-    	users.put(user.getEmail(), user);
+//    	users.put(user.getEmail(), user);
     	BasicDBObject ob = new BasicDBObject();
     	ob.append("firstName", user.getFirstName());
     	ob.append("lastName", user.getLastName());
     	ob.append("password", user.getPassword());
-    	ob.append("email", user.getPassword());
+    	ob.append("email", user.getEmail());
     	ob.append("status", user.getStatus());
     	ob.append("designation", user.getDesignation());
-
+    	ob.append("myFiles",new ArrayList<String>());
+    	ob.append("filesShared",new ArrayList<String>());   	
     	colluser.insert(ob);
     	
     	LinksDto links = new LinksDto();
@@ -114,7 +116,10 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     @Timed(name = "delete-user")
     public LinkDto deleteUserByEmail(@PathParam("email") String email) {
 	// FIXME - Dummy code
-    	users.remove(email);
+    	BasicDBObject document = new BasicDBObject();
+    	document.put("email", email);
+    	colluser.remove(document);
+//    	users.remove(email);
     	return new LinkDto("create-user", "/users","POST");
     }
 
@@ -148,36 +153,78 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     @Timed(name = "create-file")
     public Response createUserFileByEmail(@PathParam("email") String email, File file) {
 	// FIXME - Dummy code
-    	User user = users.get(email);
-    	users.get(email).getmyFiles().add(file);
+//    	users.get(email).getmyFiles().add(file);
+    	file.setFileID(fileNum);
     	BasicDBObject ob = new BasicDBObject();
     	ob.append("name", file.getName());
-    	ob.append("owner ", file.getOwner());
+    	ob.append("fileID", fileNum);
+    	ob.append("owner", file.getOwner());
     	ob.append("accessType", file.getAccessType());
+    	ob.append("sharedWith", new ArrayList<String>());
     	colldocument.insert(ob);
-    	BasicDBObject query = new BasicDBObject("email", email);
-    	DBCursor cursor ;
-    	cursor = colldocument.find(query);
-    
-    	colldocument.update((DBObject)JSON.parse("{'name':'file1'}") ,  (DBObject)JSON.parse("{'$set' : { 'name':'fil21'}}") );
-    	
-//    	BasicDBObject query = new BasicDBObject("email", email);
-//    	query.append("myFiles", new BasicDBObject("fileID", user.getmyFiles().size()+1).append("owner", user.getmyFiles().get(1).getOwner()))
+    	BasicDBObject query = new BasicDBObject().append("email", email);
+//    	BasicDBObject newDoc = new BasicDBObject().append("$set", new BasicDBObject().append("myFiles", file.getName()));
+//    	colluser.update(query,newDoc );
+    	BasicDBObject newDoc = new BasicDBObject().append("$push", new BasicDBObject().append("myFiles", file.getFileID()));
+    	colluser.update(query,newDoc );
     	LinkDto link = new LinkDto("view-file", "/users/" + email + "/files/ " + file.getFileID(),"GET");
+    	fileNum++;
     	return Response.status(201).entity(link).build();
     }
+    
+    @PUT
+    @Path("/{email}/files/{id}")
+    @Timed(name = "update-files")
+    public void updateFileByEmail(@PathParam("email") String email,@PathParam("id") int id,@QueryParam("sharedWith") String sharedWith) {
+	// FIXME - Dummy code
+/*   	users.get(email).setStatus(status);
+    	LinksDto userResponse = new LinksDto();
+    	userResponse.addLink(new LinkDto("view-user", "/users/" + email,
+        		"GET"));
+        	userResponse.addLink(new LinkDto("update-user",
+        		"/users/" + email, "PUT"));
+        	userResponse.addLink(new LinkDto("update-user",
+            		"/users/" + email, "POST"));
+        	userResponse.addLink(new LinkDto("delete-user",
+            		"/users/" + email, "DELETE"));
+        	userResponse.addLink(new LinkDto("create-file",
+            		"/users/" + email +"/files", "POST"));
+        	if (users.get(email).getmyFiles().size()>0){
+            	userResponse.addLink(new LinkDto("view-all-files",
+                		"/users/" + email + "/files", "GET"));
+            	}
+*/        	BasicDBObject query = new BasicDBObject().append("email", sharedWith);
+        	BasicDBObject newDoc = new BasicDBObject().append("$push", new BasicDBObject().append("filesShared", id));
+        	colluser.update(query,newDoc );
+        	BasicDBObject query2 = new BasicDBObject().append("fileID", id);
+        	BasicDBObject newDoc2 = new BasicDBObject().append("$push", new BasicDBObject().append("sharedWith", sharedWith));
+        	colldocument.update(query2,newDoc2);
+}
     
     @GET
     @Path("/{email}/files/{id}")
     @Timed(name = "view-file")
-    public FileDto getFileByEmailById(@PathParam("email") String email, @PathParam("id") int id) {
+    public Response getFileByEmailById(@PathParam("email") String email, @PathParam("id") int id) {
 	// FIXME - Dummy code	
-    	File file = users.get(email).getmyFiles().get(id-1);
-    	FileDto fileResponse = new FileDto(file);
-    	fileResponse.addLink(new LinkDto("view-file", "/users/" + email + "/files/" + id,
-    		"GET"));
+//    	File file = users.get(email).getmyFiles().get(id-1);
+//       	FileDto fileResponse = new FileDto(file);
+//    	fileResponse.addLink(new LinkDto("view-file", "/users/" + email + "/files/" + id,
+//    		"GET"));
 	// add more links
-	return fileResponse;
+    	BasicDBObject andQuery = new BasicDBObject();
+    	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
+    	obj.add(new BasicDBObject("fileID", id));
+    	obj.add(new BasicDBObject("owner", email));
+    	andQuery.put("$and", obj);
+    	DBCursor cursor = colldocument.find(andQuery);
+    	String output = "";
+    	while(cursor.hasNext()) {
+    	    output +=cursor.next();
+    	}
+
+    	return Response.status(200).entity(output).build();
+
+//	return fileResponse;
     }
     
     @DELETE
@@ -192,36 +239,58 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     @GET
     @Path("/{email}/files")
     @Timed(name = "view-all-files")
-    public FilesDto getAllFilesByEmail(@PathParam("email") String email) {
+    public Response getAllFilesByEmail(@PathParam("email") String email) {
 	// FIXME - Dummy code	
-    	ArrayList<File> files = users.get(email).getmyFiles();
-    	FilesDto filesResponse = new FilesDto(files);
-    	filesResponse.addLink(null);
+//    	ArrayList<File> files = users.get(email).getmyFiles();
+//    	FilesDto filesResponse = new FilesDto(files);
+    	DBCursor cursor = colldocument.find(new BasicDBObject().append("owner",email));
+    	String output = "";
+    	while(cursor.hasNext()) {
+    	    output +=cursor.next();
+    	}
+
+//    	filesResponse.addLink(null);
 	// add more links
-	return filesResponse;
+    	return Response.status(200).entity(output).build();
     }
-           
+/*           
     @POST
     @Path("/{email}/filesShared")
     @Timed(name = "create-file")
     public Response createUserFileSharedByEmail(@PathParam("email") String email, File file) {
 	// FIXME - Dummy code
-    	users.get(email).getFilesShared().add(file);
+//    	users.get(email).getFilesShared().add(file);
+    	BasicDBObject query = new BasicDBObject().append("email", email);
+    	BasicDBObject newDoc = new BasicDBObject().append("$push", new BasicDBObject().append("filesShared", file.getFileID()));
+    	colluser.update(query,newDoc );
+
     	LinkDto link = new LinkDto("view-file", "/users/" + email + "/filesShared/ " + file.getFileID(),"GET");
 
     	return Response.status(201).entity(link).build();
     }
+*/    
     @GET
     @Path("/{email}/filesShared/{id}")
     @Timed(name = "view-filesShared")
-    public FileDto getFilesSharedByEmailById(@PathParam("email") String email, @PathParam("id") int id) {
+    public Response getFilesSharedByEmailById(@PathParam("email") String email, @PathParam("id") int id) {
 	// FIXME - Dummy code	
-    	File file = users.get(email).getFilesShared().get(id-1);
-    	FileDto fileResponse = new FileDto(file);
-    	fileResponse.addLink(new LinkDto("view-filesShared", "/users/" + email + "/filesShared/" + id,
-    		"GET"));
+//    	File file = users.get(email).getFilesShared().get(id-1);
+//    	FileDto fileResponse = new FileDto(file);
+//    	fileResponse.addLink(new LinkDto("view-filesShared", "/users/" + email + "/filesShared/" + id,
+//    		"GET"));
 	// add more links
-	return fileResponse;
+    	BasicDBObject andQuery = new BasicDBObject();
+    	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
+    	obj.add(new BasicDBObject("fileID", id));
+    	obj.add(new BasicDBObject("sharedWith", email));
+    	andQuery.put("$and", obj);
+    	DBCursor cursor = colldocument.find(andQuery);
+    	String output = "";
+    	while(cursor.hasNext()) {
+    	    output +=cursor.next();
+    	}
+
+    	return Response.status(200).entity(output).build();
     }
     
     @DELETE
@@ -236,13 +305,25 @@ import edu.sjsu.cmpe.dropbox.config.LibraryServiceConfiguration;
     @GET
     @Path("/{email}/filesShared")
     @Timed(name = "view-all-filesShared")
-    public FilesDto getAllFilesSharedsByEmail(@PathParam("email") String email) {
+    public Response getAllFilesSharedsByEmail(@PathParam("email") String email) {
 	// FIXME - Dummy code	
-    	ArrayList<File> filesShared = users.get(email).getFilesShared();
-    	FilesDto filesSharedResponse = new FilesDto(filesShared);
-    	filesSharedResponse.addLink(null);
+//    	ArrayList<File> filesShared = users.get(email).getFilesShared();
+//    	FilesDto filesSharedResponse = new FilesDto(filesShared);
+//    	filesSharedResponse.addLink(null);
 	// add more links
-    	return filesSharedResponse;
+    	BasicDBObject query = new BasicDBObject().append("email",email);
+    	BasicDBObject fields = new BasicDBObject();
+    	fields.put("filesShared", 1);     
+    	DBCursor cursor = colluser.find(query, fields);
+
+    	String output = "";
+    	while(cursor.hasNext()) {
+    	    output +=cursor.next();
+    	}
+
+	// add more links
+    	return Response.status(200).entity(output).build();
+//    	return filesSharedResponse;
     }
   
 }
