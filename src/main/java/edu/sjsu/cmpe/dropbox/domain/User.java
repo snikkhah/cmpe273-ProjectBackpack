@@ -3,9 +3,11 @@ package edu.sjsu.cmpe.dropbox.domain;
 import java.util.ArrayList;
 
 public class User {
-    private String firstName;
+    private int userID;
+	private String firstName;
     private String lastName;
     private String password;
+    private String confirmPassword;
     private String email;
     private String status;
     private String designation;
@@ -84,5 +86,21 @@ public class User {
 
 	public void setDesignation(String designation) {
 		this.designation = designation;
+	}
+
+	public int getUserID() {
+		return userID;
+	}
+
+	public void setUserID(int userID) {
+		this.userID = userID;
+	}
+
+	public String getConfirmPassword() {
+		return confirmPassword;
+	}
+
+	public void setConfirmPassword(String confirmPassword) {
+		this.confirmPassword = confirmPassword;
 	}
 }

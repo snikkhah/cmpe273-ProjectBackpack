@@ -4,17 +4,10 @@
  "password" : "secret",
  "email": "abc",
  "status" : "activated",
- "designation" : "CEO Not",
- "myFiles" : 
-        [ { "fileID" : 1 ,
-	   "name" : "file1",
-	   "owner" : "Sina",
-	   "accessType" : "private"}]
+ "designation" : "CEO Not"
 }
 *********************************************************
-{          "fileID" : 2 ,
-	   "name" : "file2",
+{          "name" : "file2",
 	   "owner" : "Sina",
-	   "accessType" : "private",
-	   "sharedWith" : ["Lata","Trupti"]
+	   "accessType" : "private"
 }

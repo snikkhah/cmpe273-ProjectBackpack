@@ -10,3 +10,5 @@ Delete file or shared file
     @DELETE
     @Path("/{email}/filesShared/{id}")
 ***********
+@PUT
+    @Path("/{email}")
