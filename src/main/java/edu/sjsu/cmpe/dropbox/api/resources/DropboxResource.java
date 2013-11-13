@@ -252,6 +252,7 @@ import freemarker.template.TemplateException;
     @POST
     @Path("/login")
     @Consumes(MediaType.APPLICATION_JSON)
+//    @Produces(MediaType.TEXT_PLAIN)
     @Timed(name = "login-user")
     public Response login(User user) {
     	Writer output = new StringWriter();
@@ -342,6 +343,7 @@ import freemarker.template.TemplateException;
     @Timed(name = "Create-file")
     public Response createFilePage(@PathParam("userID") int userID) {
     	
+    	DBObject user = colluser.findOne(new BasicDBObject("userID",userID));
     	Writer output = new StringWriter();
 
     	try {
@@ -350,6 +352,7 @@ import freemarker.template.TemplateException;
 			root.put("name", "");
 			root.put("accessType", "");
 			root.put("userID", userID);
+			root.put("user", user);
 			template.process(root, output);
 			
 		} catch (Exception e) {

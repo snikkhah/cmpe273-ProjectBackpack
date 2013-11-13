@@ -12,11 +12,27 @@
 		      .error {color: red}
 		    </style>
         </head>
-        <body>
+        <body style="background:#123;">
+			<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+			      <div class="container">
+			        <div class="navbar-header">
+			          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+			            <span class="sr-only">Toggle navigation</span>
+			            <span class="icon-bar"></span>
+			            <span class="icon-bar"></span>
+			            <span class="icon-bar"></span>
+			          </button>
+			          <a class="navbar-brand" href="#">Welcome to DropBox</a>
+			        </div>
+			        <div class="navbar-collapse collapse">
+				        <button type="button" id="signup" class="btn btn-default navbar-btn navbar-right">Sign up</button>
+						<p class="navbar-text navbar-right" style="margin-right: 10px;"><b>New user?</b></p>
+			        </div><!--/.navbar-collapse -->
+			      </div>
+			    </div>
             <div class="container">
                 <div class="jumbotron">
-                    Don't have an account? <a href="/dropbox/v1/users/signup">Signup</a><p>
-				    <h2>Signup</h2>
+				    <h2>Login</h2>
 				    <form method="post">
 				      <table class="table table-hover">
 				        <tr>
@@ -81,6 +97,12 @@
 
 				    });
 				});
+				
+	
+				    $("#signup").click(function() {
+				    window.location = "/dropbox/v1/users/signup";
+			  	});
+
 			</script>
         </body>
 </html>
