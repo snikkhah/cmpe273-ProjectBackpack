@@ -395,6 +395,8 @@ import freemarker.template.TemplateException;
     	newDoc2.append("$set", new BasicDBObject("fileCount",++fileCount));
     	colldocument.update(countQuery,newDoc2 );
 
+    	DBObject user = colluser.findOne(new BasicDBObject("userID",userID));
+    	
     	Writer output = new StringWriter();
 
     	try {
@@ -402,7 +404,9 @@ import freemarker.template.TemplateException;
 			SimpleHash root = new SimpleHash();
 			root.put("name", file.getName());
 			root.put("accessType", file.getAccessType());
+			root.put("user", user);
 			root.put("userID", userID);
+			
 			template.process(root, output);
 			
 		} catch (Exception e) {
