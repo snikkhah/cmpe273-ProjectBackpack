@@ -2,6 +2,7 @@ package edu.sjsu.cmpe.dropbox.api.resources;
 
 
 
+import java.awt.Cursor;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.StringWriter;
@@ -66,6 +67,10 @@ import freemarker.template.TemplateException;
 	    	
 	    	DBObject ownerID = null;
 	    	BasicDBObject query = new BasicDBObject("fileID",fileId);
+	    	BasicDBObject result = (BasicDBObject) colldocument.findOne(query);
+	    	if (result.getString("accessType").toLowerCase().equals("public")){
+	    		return true;
+	    	}
 	    	query.append("owner",userId);
 	    	BasicDBObject fields = new BasicDBObject();    	
 	    	DBCursor cursor = colldocument.find(query, fields);
@@ -290,6 +295,7 @@ import freemarker.template.TemplateException;
 			template = cfg.getTemplate("user_template.ftl");
 			SimpleHash root = new SimpleHash();
 			root.put("user", user);
+			root.put("name", "");
 			template.process(root, output);
 			
 		} catch (Exception e) {
@@ -448,6 +454,7 @@ import freemarker.template.TemplateException;
 			root.put("userID", userID);
 			root.put("files", files);
 			root.put("userFile", true);
+			root.put("publicFile", false);
 			template.process(root, output);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -517,6 +524,25 @@ import freemarker.template.TemplateException;
     } 
 
     @GET
+    @Path("/{userID}/publicfiles/{id}")
+    @Timed(name = "view-filesShared")
+    public Response getPublicFilesByEmailById(@PathParam("userID") int userID, @PathParam("id") int id) {
+
+    	BasicDBObject andQuery = new BasicDBObject();
+    	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
+    	obj.add(new BasicDBObject("fileID", id));
+    	obj.add(new BasicDBObject("accessType", "Public"));
+    	andQuery.put("$and", obj);
+    	DBCursor cursor = colldocument.find(andQuery);
+    	String output = "";
+    	while(cursor.hasNext()) {
+    	    output +=cursor.next();
+    	}
+    	    	
+    	return Response.status(200).entity(output).build();
+    }
+    
+    @GET
     @Path("/{userID}/filesShared/{id}")
     @Timed(name = "view-filesShared")
     public Response getFilesSharedByEmailById(@PathParam("userID") int userID, @PathParam("id") int id) {
@@ -545,6 +571,14 @@ import freemarker.template.TemplateException;
     	DBCursor cursor = colldocument.find(query, fields);
     	List<DBObject> files = cursor.toArray();
     	
+    	for (int i=0; i<files.size(); i++){
+    		int ownerID = (Integer) files.get(i).get("owner");
+    		DBObject owner = colluser.findOne(new BasicDBObject("userID",ownerID));
+    		String ownerName =(String) owner.get("firstName");
+    		ownerName += " "+(String) owner.get("lastName");
+    		((BasicDBObject)files.get(i)).append("ownerName", ownerName);
+    	}
+    	
     	Writer output = new StringWriter();
 
     	try {
@@ -554,6 +588,7 @@ import freemarker.template.TemplateException;
 			root.put("files", files);
 			root.put("userFile", false);
 			root.put("owners", null);
+			root.put("publicFile", false);
 			template.process(root, output);
 			
 		} catch (Exception e) {
@@ -561,6 +596,72 @@ import freemarker.template.TemplateException;
 			e.printStackTrace();
 		}
 
+    	
+    	return Response.status(200).entity(output.toString()).build();
+    }
+/*    
+    @GET
+    @Path("/{userID}/publicFiles")
+    @Produces(MediaType.TEXT_HTML)
+    @Timed(name = "Get-publicFiles")
+    public Response getPublicFiles(@PathParam("userID") int userID) {
+    	BasicDBObject query = new BasicDBObject("userID",userID);
+    	DBObject user = colluser.findOne(query);
+    	Writer output = new StringWriter();
+
+    	try {
+			template = cfg.getTemplate("publicFiles.ftl");
+			SimpleHash root = new SimpleHash();
+			root.put("user", user);
+			root.put("name", "");
+			root.put("userID", userID);
+			template.process(root, output);
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	
+    	return Response.status(200).entity(output.toString()).build();
+    }
+*/    
+    @POST
+    @Path("/{userID}/publicFiles")
+    @Produces(MediaType.TEXT_HTML)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Timed(name = "Search-publicFiles")
+    public Response searchPublicFiles(@PathParam("userID") int userID, File file) {
+//    	List conditions = new ArrayList();
+//    	conditions.add(file.getName());
+//    	conditions.add(new BasicDBObject("$options","i"));
+    	BasicDBObject query = new BasicDBObject("name",new BasicDBObject("$regex",file.getName())).append("accessType", "Public");
+    	DBCursor files = colldocument.find(query);
+    	List<DBObject> filesArray = files.toArray();
+    	
+    	Writer output = new StringWriter();
+    	for (int i=0; i<filesArray.size(); i++){
+    		int ownerID = (Integer) filesArray.get(i).get("owner");
+    		DBObject owner = colluser.findOne(new BasicDBObject("userID",ownerID));
+    		String ownerName =(String) owner.get("firstName");
+    		ownerName += " "+(String) owner.get("lastName");
+    		((BasicDBObject)filesArray.get(i)).append("ownerName", ownerName);
+    	}
+    	
+    	try {
+			template = cfg.getTemplate("file_template.ftl");
+			SimpleHash root = new SimpleHash();
+			root.put("name",file.getName());
+			root.put("userID", userID);
+			root.put("files", filesArray);
+			root.put("userFile", false);
+			root.put("publicFile", true);
+			root.put("owners", null);
+			template.process(root, output);
+			
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     	
     	return Response.status(200).entity(output.toString()).build();
     }

@@ -1,6 +1,8 @@
 
 <#if userFile>
 <h4>My Files</h4>
+<#elseif publicFile>
+<h4>Search Results</h4>
 <#else>
 <h4>Files Shared with Me</h4>
 </#if>
@@ -9,18 +11,22 @@
     <th>File Name</th>
     <th>Access Type</th>
     <#if userFile>
-    <th>Shared with User IDs</th>
+    <th>Shared with</th>
+    <#else>
+    <th>Owner</th>
     </#if>
     </tr>                
     <#list files as file>
         <tr id="${file.fileID}t">
-        	<td><a href="/dropbox/v1/users/${userID}/files<#if !userFile>Shared</#if>/${file.fileID}">${file.name}</a></td>
+        	<td><a href="/dropbox/v1/users/${userID}/<#if publicFile>public</#if>files<#if !userFile && !publicFile>Shared</#if>/${file.fileID}">${file.name}</a></td>
 			<td>${file.accessType}</td>
 			<#if userFile>
 			<td><#list file.sharedWithNames as name> ${name!""}</#list></td>
 			<td><button id="${file.fileID}" type="button" class="btn btn-danger deleteMe">Delete</button></td>
 			<td><button id="${file.fileID}s" type="button" class="btn btn-success shareMeWith">Share</button></td> 	
 			<td><form method="post">Share with:<input type="text" name="sharedWith" id="${file.fileID}i" placeholder=" email@domain.com"/></form></td>
+			<#else>
+			<td>${file.ownerName}</td>
 			</#if>
 			</tr>
     </#list>
