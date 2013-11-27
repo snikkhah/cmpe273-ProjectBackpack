@@ -1,6 +1,7 @@
 
 <html>
         <head>
+
             <title>Upload</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <!-- Latest compiled and minified CSS -->
@@ -22,7 +23,7 @@
 			            <span class="icon-bar"></span>
 			            <span class="icon-bar"></span>
 			          </button>
-			          <a class="navbar-brand" href="#">Welcome to DropBox</a>
+			          <a class="navbar-brand" href="#">Welcome to Backpack</a>
 			        </div>
 			        <div class="navbar-collapse collapse">
 				        <button type="button" id="logout" class="btn btn-default navbar-btn navbar-right">Log out</button>
@@ -33,24 +34,28 @@
             <div class="container">
                 <div class="jumbotron">
 				    <h2>Create a File</h2>
-				    <form method="post">
+				    
 				      <table class="table table-hover" >
 				        <tr>
-				          <td class="label">File Name</td>
-				          <td><input type="text" name="name" value="${name}"></td>
-				        </tr>
-				        <tr>
-				        	<td class="label">Access Type</td>
-				        	<td><select name="accessType">	
-							<option value="Private">Private</option>
-							<option value="Public">Public</option>
-							</select></td>
-				        </tr>
+				        <td> 
+				        	<form method="post" enctype="multipart/form-data">
+				        		<input type="file" id="upload" name="file">
+				        		   
+<!--				        		<select name="accessType">        
+                                    <option value="Private">Private</option>
+                                    <option value="Public">Public</option>
+                                </select>
+ -->                               
+					        </form>
+					        
+				        </td>
+				       </tr> 
 					</table>
-				    </form>
+				    
 				    
 				    <div id="submitButton" class="btn btn-primary">Upload</div>
 				    <div id="cancelButton" class="btn btn-warning">Cancel</div>
+				    
                     <!-- calls getBooks() from HomeResource -->
                 </div>
             </div> <!-- end of container -->
@@ -63,46 +68,63 @@
             <!-- application ui scripts -->
 			
 			<script>
-			$.fn.serializeObject = function()
-				{
-				    var o = {};
-				    var a = this.serializeArray();
-				    $.each(a, function() {
-				        if (o[this.name] !== undefined) {
-				            if (!o[this.name].push) {
-				                o[this.name] = [o[this.name]];
-				            }
-				            o[this.name].push(this.value || '');
-				        } else {
-				            o[this.name] = this.value || '';
-				        }
-				    });
-				    return o;
-				};
-				
-				$(function() {
+			
+			 $.fn.serializeObject = function()
+                                {
+                                    var o = {};
+                                    var a = this.serializeArray();
+                                    $.each(a, function() {
+                                        if (o[this.name] !== undefined) {
+                                            if (!o[this.name].push) {
+                                                o[this.name] = [o[this.name]];
+                                            }
+                                            o[this.name].push(this.value || '');
+                                        } else {
+                                            o[this.name] = this.value || '';
+                                        }
+                                    });
+                                    return o;
+                                };
+                                
+                                $(function() {
 				    $('#submitButton').click(function() {
+				    	var formData = new FormData($('form')[0]);
+//						var accessType = JSON.stringify($('form').serializeObject());
 //				        alert(JSON.stringify($('form').serializeObject()));
+						
 				        $.ajax({
-			        url: "/dropbox/v1/users/${userID}/files",
+			        url: "/backpack/v1/users/${userID}/files",
 			        type: 'POST',    
-			        contentType: 'application/json',
-			        data:JSON.stringify($('form').serializeObject()), 
+		          	data:formData,
+		          	cache: false,
+			        contentType: false,
+			        processData: false,
 			        success: function(result) {
-			         window.location = "/dropbox/v1/users/${userID}";
-			  	}
+			         window.location = "/backpack/v1/users/${userID}";
+			  	},
+			  		error:function(jqXHR,error, errorThrown){
+			        var msg ;
+			        if (errorThrown=="Not Acceptable"){msg = "File was not selcted!";}
+			        else if (errorThrown== "Conflict"){msg="File already exists! Please remove the existing file first or rename the file you are trying to update.";}
+			        else {msg="Something doesn't add up!";}
+			        $("#errormsg").empty().append(msg);
+//			        alert("file already exist");
+			  		}
+			  		
 			  	});
 
 				    });
 				});
 				
-				$('#logout').click(function() {
-				 window.location = "/dropbox/v1/users/login";
-				    });
-				    
-			    $('#cancelButton').click(function() {
-			 	window.location = "/dropbox/v1/users/${userID}";
-			    });
+                                $('#logout').click(function() {
+                                 window.location = "/backpack/v1/users/login";
+                                    });
+                                    
+                            $('#cancelButton').click(function() {
+                                 window.location = "/backpack/v1/users/${userID}";
+                            });
+                            
+
 			</script>
         </body>
 </html>

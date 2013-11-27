@@ -1,7 +1,7 @@
 
 <html>
         <head>
-            <title>DropBox</title>
+            <title>Backpack</title>
 
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <!-- Latest compiled and minified CSS -->
@@ -17,13 +17,14 @@
 			<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
 			      <div class="container">
 			        <div class="navbar-header">
+<!--			        <img src="https://cdn1.iconfinder.com/data/icons/SOPHISTIQUE/education_icons/png/400/backpack.png" alt="logo" width="32" height="32">  -->
 			          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
 			            <span class="sr-only">Toggle navigation</span>
 			            <span class="icon-bar"></span>
 			            <span class="icon-bar"></span>
 			            <span class="icon-bar"></span>
 			          </button>
-			          <a class="navbar-brand" href="#">Welcome to DropBox</a>
+			          <a class="navbar-brand" href="#">Welcome to Backpack</a>
 			        </div>
 			        <div class="navbar-collapse collapse">
 				        <button type="button" id="logout" class="btn btn-default navbar-btn navbar-right">Log out</button>
@@ -45,6 +46,7 @@
                     <hr>
 					<div id="userFiles" class="container">
 					</div>
+					<h5 id ="errormsg" class="error"></h5>
 					<div id="filesShared" class="container"> 
 					</div>
 					<div id="puplicFiles" class="container">
@@ -66,7 +68,7 @@
 			<script>
 			$(function() {
  				$.ajax({
-			        url: "/dropbox/v1/users/${user.userID}/files",
+			        url: "/backpack/v1/users/${user.userID}/files",
 			        type: 'GET',
 			        success: function(data) {
 			            $("#userFiles").empty().append(data);
@@ -77,7 +79,7 @@
 				$(function() {
 				    $('#showSharedFiles').click(function() {
 				    $.ajax({
-			        url: "/dropbox/v1/users/${user.userID}/filesShared",
+			        url: "/backpack/v1/users/${user.userID}/filesShared",
 			        type: 'GET',
 			        success: function(data) {
 			            $("#filesShared").empty().append(data);
@@ -91,7 +93,7 @@
 					if (r==true)
 					  {
 						  $.ajax({
-					        url: "/dropbox/v1/users/${user.userID}",
+					        url: "/backpack/v1/users/${user.userID}",
 					        type: 'DELETE',
 					        success: function(data) {
 					            alert("Your account was successfully deleted!");
@@ -102,11 +104,11 @@
 				    });
 				});
 				$('#uploadFile').click(function() {
-				 window.location = "/dropbox/v1/users/${user.userID}/files/createFile";
+				 window.location = "/backpack/v1/users/${user.userID}/files/createFile";
 				    });
 				    
 				    $('#logout').click(function() {
-				 window.location = "/dropbox/v1/users/login";
+				 window.location = "/backpack/v1/users/login";
 				    });
 				    
 				    						$.fn.serializeObject = function()
@@ -131,7 +133,7 @@
 				    $('#searchButton').click(function() {
 //				        alert(JSON.stringify($('form').serializeObject()));
 				    $.ajax({
-			        url: "/dropbox/v1/users/${user.userID}/publicFiles",
+			        url: "/backpack/v1/users/${user.userID}/publicFiles",
 			        type: 'POST',    
 			        contentType: 'application/json',
 			        data:JSON.stringify($('form').serializeObject()), 

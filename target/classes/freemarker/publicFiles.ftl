@@ -1,7 +1,7 @@
 
 <html>
         <head>
-            <title>DropBox</title>
+            <title>Backpack</title>
 
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <!-- Latest compiled and minified CSS -->
@@ -23,7 +23,7 @@
 			            <span class="icon-bar"></span>
 			            <span class="icon-bar"></span>
 			          </button>
-			          <a class="navbar-brand" href="#">Welcome to DropBox</a>
+			          <a class="navbar-brand" href="#">Welcome to Backpack</a>
 			        </div>
 			        <div class="navbar-collapse collapse">
 				        <button type="button" id="logout" class="btn btn-default navbar-btn navbar-right">Log out</button>
@@ -74,7 +74,7 @@
 				    $('#searchButton').click(function() {
 //				        alert(JSON.stringify($('form').serializeObject()));
 				    $.ajax({
-			        url: "/dropbox/v1/users/${userID}/publicFiles",
+			        url: "/backpack/v1/users/${userID}/publicFiles",
 			        type: 'POST',    
 			        contentType: 'application/json',
 			        data:JSON.stringify($('form').serializeObject()), 

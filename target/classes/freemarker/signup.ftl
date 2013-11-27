@@ -22,7 +22,7 @@
 			            <span class="icon-bar"></span>
 			            <span class="icon-bar"></span>
 			          </button>
-			          <a class="navbar-brand" href="#">Welcome to DropBox</a>
+			          <a class="navbar-brand" href="#">Welcome to Backpack</a>
 			        </div>
 			        <div class="navbar-collapse collapse">
 				        <button type="button" id="login" class="btn btn-default navbar-btn navbar-right">Log in</button>
@@ -101,7 +101,7 @@
 				    $('#submitButton').click(function() {
 //				        alert(JSON.stringify($('form').serializeObject()));
 				        $.ajax({
-			        url: "/dropbox/v1/users/signup",
+			        url: "/backpack/v1/users/signup",
 			        type: 'POST',    
 			        contentType: 'application/json',
 			        data:JSON.stringify($('form').serializeObject()), 
@@ -112,7 +112,7 @@
 			        $("#errormsg").empty().append(msg);
 			  		},
 			        success: function(result) {
-			        	window.location = "/dropbox/v1/users/login";
+			        	window.location = "/backpack/v1/users/login";
 //			            alert("success?");
 			  	}
 			  	});
@@ -121,7 +121,7 @@
 				});
 				
 				$("#login").click(function() {
-				    window.location = "/dropbox/v1/users/login";
+				    window.location = "/backpack/v1/users/login";
 			  	});
 			</script>
         </body>
