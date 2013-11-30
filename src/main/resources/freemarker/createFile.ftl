@@ -55,7 +55,7 @@
 				    
 				    <div id="submitButton" class="btn btn-primary">Upload</div>
 				    <div id="cancelButton" class="btn btn-warning">Cancel</div>
-				    
+				    <h5 id ="errormsg" class="error"></h5>
                     <!-- calls getBooks() from HomeResource -->
                 </div>
             </div> <!-- end of container -->
@@ -122,8 +122,7 @@
                                     
                             $('#cancelButton').click(function() {
                                  window.location = "/backpack/v1/users/${userID}";
-                            });
-                            
+                            });                
 
 			</script>
         </body>

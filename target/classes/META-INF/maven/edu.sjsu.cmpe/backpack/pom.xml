@@ -45,11 +45,6 @@
 			<artifactId>jersey-multipart</artifactId>
 			<version>1.6</version>
 		</dependency>
-		<dependency>
-			<groupId>org.jvnet</groupId>
-			<artifactId>mimepull</artifactId>
-			<version>1.6</version>
-		</dependency>
 	</dependencies>
 
 	<build>

@@ -5,7 +5,7 @@ http:
   rootPath: /backpack/*
 
   # The port on which the HTTP server listens for service requests.
-  port: 8002		
+  port: 8000		
 
   # The port on which the HTTP server listens for administrative requests.
   adminPort: 8081

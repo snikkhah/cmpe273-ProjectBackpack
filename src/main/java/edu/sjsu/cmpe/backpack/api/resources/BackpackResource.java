@@ -30,6 +30,9 @@ import java.util.List;
 
 
 
+
+
+
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -42,6 +45,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 
 import com.mongodb.MongoClient;
 import com.mongodb.DB;
@@ -52,6 +56,7 @@ import com.mongodb.DBCursor;
 import com.sun.jersey.core.header.FormDataContentDisposition;
 import com.sun.jersey.multipart.FormDataParam;
 import com.yammer.metrics.annotation.Timed;
+import com.yammer.metrics.core.HealthCheck.Result;
 
 import edu.sjsu.cmpe.backpack.domain.User;
 import edu.sjsu.cmpe.backpack.domain.UserFile;
@@ -60,6 +65,7 @@ import edu.sjsu.cmpe.backpack.dto.LinksDto;
 import freemarker.template.Configuration;
 import freemarker.template.SimpleHash;
 import freemarker.template.Template;
+import freemarker.template.TemplateModelException;
 
 	@Path("/v1/users")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -87,7 +93,7 @@ import freemarker.template.Template;
 	    		dirRootPath = "c:/backpack"; 
 	    	}
 	    	else if (os.toLowerCase().contains("linux")){
-	    		dirRootPath = "/backpack";
+	    		dirRootPath = "./backpack";
 	    	}
 	    }
 
@@ -104,14 +110,14 @@ import freemarker.template.Template;
 	    	DBCursor cursor = colldocument.find(query, fields);
 			while (cursor.hasNext()) {
 				ownerID = cursor.next();
-				System.out.println("ownerId" + ownerID.get("owner"));
+//				System.out.println("ownerId" + ownerID.get("owner"));
 			}
 		if (ownerID == null){
-			System.out.println("OwnerId and userId doesn't match");
+//			System.out.println("OwnerId and userId doesn't match");
 			return false;
 		}
 		else {
-			System.out.println("OwnerId and userId match");
+//			System.out.println("OwnerId and userId match");
 			return true;
 			}
 	    }
@@ -407,16 +413,6 @@ import freemarker.template.Template;
             @FormDataParam("file") FormDataContentDisposition contentDisposition) throws IOException {
 	// FIXME - Dummy code
     	int response = 201;
-    	try {
-//    		System.out.println("\n\n\n"+ss+"\n\n\n");
-			System.out.println("\n\n\n"+contentDisposition.getFileName()+"\t"+contentDisposition.getName()+
-					"\t"+contentDisposition.getSize()+"\t"+contentDisposition.getType()+"\n\n\n");
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			System.out.println("\n\n\nHey I feel so empty!\n\n\n");
-			response = 406;
-//			e1.printStackTrace();
-		}
     	if (contentDisposition.getFileName().equals("")){
     		response = 406;
     		return Response.status(response).build();
@@ -589,17 +585,24 @@ import freemarker.template.Template;
 	
     @GET
        @Path("/{userID}/files/{id}")
+       @Produces("text/plain")
        @Timed(name = "view-file")
        public Response getMyFileByUserIdById(@PathParam("userID") int userID, @PathParam("id") int id) {
-    	String output ="";
+    	BasicDBObject result=null;
     	if(checkOwnerOfFile(userID,id)){
        		BasicDBObject query = new BasicDBObject("fileID",id);
-       		DBCursor cursor = colldocument.find(query);
-       		while (cursor.hasNext()) {
-       			output +=cursor.next();
-       		}
+       		result = (BasicDBObject) colldocument.findOne(query);
+           	String path = dirRootPath+"/"+userID+"/"+ result.getString("name");
+           	File file = new File(path);
+    		ResponseBuilder response = Response.ok((Object) file);
+    		response.header("Content-Disposition",
+    			"attachment; filename=\""+result.getString("name")+"\"");
+    		return response.build();
        	}
-       	return Response.status(200).entity(output).build();
+    	else 
+    		
+    		return Response.status(400).entity(false).build();
+
 }
 
     
@@ -631,40 +634,47 @@ import freemarker.template.Template;
 
     @GET
     @Path("/{userID}/publicfiles/{id}")
+    @Produces("text/plain")
     @Timed(name = "view-filesShared")
-    public Response getPublicFilesByEmailById(@PathParam("userID") int userID, @PathParam("id") int id) {
+    public Response getPublicFilesByEmailById(@PathParam("userID") int userID, @PathParam("id") int fileID) {
 
     	BasicDBObject andQuery = new BasicDBObject();
     	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
-    	obj.add(new BasicDBObject("fileID", id));
+    	obj.add(new BasicDBObject("fileID", fileID));
     	obj.add(new BasicDBObject("accessType", "Public"));
     	andQuery.put("$and", obj);
-    	DBCursor cursor = colldocument.find(andQuery);
-    	String output = "";
-    	while(cursor.hasNext()) {
-    	    output +=cursor.next();
-    	}
-    	    	
-    	return Response.status(200).entity(output).build();
+    	BasicDBObject result= (BasicDBObject) colldocument.findOne(andQuery);
+   	   	String path = dirRootPath+"/"+result.getString("owner")+"/"+ result.getString("name");
+       	File file = new File(path);
+        
+		ResponseBuilder response = Response.ok((Object) file);
+		response.header("Content-Disposition",
+    			"attachment; filename=\""+result.getString("name")+"\"");
+		return response.build();
+    
     }
     
     @GET
     @Path("/{userID}/filesShared/{id}")
+    @Produces("text/plain")
     @Timed(name = "view-filesShared")
-    public Response getFilesSharedByEmailById(@PathParam("userID") int userID, @PathParam("id") int id) {
+    public Response getFilesSharedByEmailById(@PathParam("userID") int userID, @PathParam("id") int fileID) {
 
     	BasicDBObject andQuery = new BasicDBObject();
     	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
-    	obj.add(new BasicDBObject("fileID", id));
+    	obj.add(new BasicDBObject("fileID", fileID));
     	obj.add(new BasicDBObject("sharedWith", userID));
     	andQuery.put("$and", obj);
-    	DBCursor cursor = colldocument.find(andQuery);
-    	String output = "";
-    	while(cursor.hasNext()) {
-    	    output +=cursor.next();
-    	}
-    	    	
-    	return Response.status(200).entity(output).build();
+    	BasicDBObject result= (BasicDBObject) colldocument.findOne(andQuery);
+   	   	String path = dirRootPath+"/"+result.getString("owner")+"/"+ result.getString("name");
+       	File file = new File(path);
+        
+		ResponseBuilder response = Response.ok((Object) file);
+		response.header("Content-Disposition",
+    			"attachment; filename=\""+result.getString("name")+"\"");
+		return response.build();
+
+//    	return Response.status(200).entity(output).build();
     }
 
     @GET
@@ -736,14 +746,11 @@ import freemarker.template.Template;
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_JSON)
     @Timed(name = "Search-publicFiles")
-    public Response searchPublicFiles(@PathParam("userID") int userID, UserFile UserFile) {
-//    	List conditions = new ArrayList();
-//    	conditions.add(file.getName());
-//    	conditions.add(new BasicDBObject("$options","i"));
-    	BasicDBObject query = new BasicDBObject("name",new BasicDBObject("$regex",UserFile.getName()).append("$options", 'i')).append("accessType", "Public");
+    public Response searchPublicFiles(@PathParam("userID") int userID, SimpleHash input) throws TemplateModelException {
+
+    	BasicDBObject query = new BasicDBObject("name",new BasicDBObject("$regex",input.get("name")).append("$options", 'i')).append("accessType", "Public");
     	DBCursor files = colldocument.find(query);
     	List<DBObject> filesArray = files.toArray();
-    	
     	Writer output = new StringWriter();
     	for (int i=0; i<filesArray.size(); i++){
     		int ownerID = (Integer) filesArray.get(i).get("owner");
@@ -752,11 +759,10 @@ import freemarker.template.Template;
     		ownerName += " "+(String) owner.get("lastName");
     		((BasicDBObject)filesArray.get(i)).append("ownerName", ownerName);
     	}
-    	
     	try {
 			template = cfg.getTemplate("file_template.ftl");
 			SimpleHash root = new SimpleHash();
-			root.put("name",UserFile.getName());
+			root.put("name",input.get("name"));
 			root.put("userID", userID);
 			root.put("files", filesArray);
 			root.put("userFile", false);

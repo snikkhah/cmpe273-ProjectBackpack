@@ -49,7 +49,7 @@
 					<h5 id ="errormsg" class="error"></h5>
 					<div id="filesShared" class="container"> 
 					</div>
-					<div id="puplicFiles" class="container">
+					<div id="publicFiles" class="container">
 					</div>
 				    <div id="showSharedFiles" class="btn btn-primary">Files Shared with Me</div>
 				    <div id="uploadFile" class="btn btn-primary">Upload</div>
@@ -141,7 +141,7 @@
 			        alert("something is wrong!");
 			  		},
 			        success: function(data) {
-			           $("#puplicFiles").empty().append(data);
+			           $("#publicFiles").empty().append(data);
 			  	}
 			  	});
 
