@@ -12,27 +12,6 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -66,6 +45,11 @@ import freemarker.template.Configuration;
 import freemarker.template.SimpleHash;
 import freemarker.template.Template;
 import freemarker.template.TemplateModelException;
+
+import java.util.*;
+import javax.mail.*;
+import javax.mail.internet.*;
+import javax.activation.*;
 
 	@Path("/v1/users")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -567,7 +551,16 @@ import freemarker.template.TemplateModelException;
 			BasicDBObject query2 = new BasicDBObject("fileID", fileID);
 			BasicDBObject newDoc2 = new BasicDBObject().append("$push",new BasicDBObject("sharedWith", personID));
 			colldocument.update(query2, newDoc2);
-			}
+			
+			BasicDBObject file = (BasicDBObject) colldocument.findOne(query2);
+			BasicDBObject owner = (BasicDBObject) colluser.findOne(new BasicDBObject("userID",userID));
+			String fileName = file.getString("name");
+			String recieverFullName = person.getString("firstName")+" "+person.getString("lastName");
+			String ownerFullName = owner.getString("firstName")+" "+owner.getString("lastName");
+			String link = "http://localhost:8000/backpack/v1/users/"+personID+"/filesShared/"+fileID;
+			sendEmail(sharedWithID, fileName,ownerFullName, recieverFullName, link);
+//			String recieverEmail, String fileName, String owner, String reciever, String link
+		}
 		else {responseCode = 406;}
 		}
 		else if (accessType != null){
@@ -783,5 +776,42 @@ import freemarker.template.TemplateModelException;
         retVal.setClassForTemplateLoading(BackpackResource.class, "/freemarker");
         return retVal;
     }
-  
+    private void sendEmail(String recieverEmail, String fileName, String owner, String reciever, String link){
+    	final String username = "cmpe273s@gmail.com";
+		final String password = "hlhlsissms";
+ 
+		Properties props = new Properties();
+		props.put("mail.smtp.auth", "true");
+		props.put("mail.smtp.starttls.enable", "true");
+		props.put("mail.smtp.host", "smtp.gmail.com");
+		props.put("mail.smtp.port", "587");
+ 
+		Session session = Session.getInstance(props,
+		  new javax.mail.Authenticator() {
+			protected PasswordAuthentication getPasswordAuthentication() {
+				return new PasswordAuthentication(username, password);
+			}
+		  });
+ 
+		try {
+ 
+			Message message = new MimeMessage(session);
+			message.setFrom(new InternetAddress("cmpe273s@gmail.com"));
+			message.setRecipients(Message.RecipientType.TO,
+				InternetAddress.parse(recieverEmail));
+			String msg = "Dear "+reciever+",\n\n"+owner+" has shared a file with you. Please click on the link below to download the file:\n"+link
+					+"\n\nThanks for using Backpack! See you soon.\nBackpack Inc.";
+			message.setSubject("New Backpack content!");
+			message.setText(msg);
+ 
+			Transport.send(message);
+ 
+			System.out.println("Email Sent");
+ 
+		} catch (MessagingException e) {
+			throw new RuntimeException(e);
+		}
+
+    }
+    
 }

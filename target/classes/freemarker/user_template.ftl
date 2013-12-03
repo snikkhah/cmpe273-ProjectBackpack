@@ -2,7 +2,6 @@
 <html>
         <head>
             <title>Backpack</title>
-
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <!-- Latest compiled and minified CSS -->
             <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" media="screen">
@@ -111,7 +110,7 @@
 				 window.location = "/backpack/v1/users/login";
 				    });
 				    
-				    						$.fn.serializeObject = function()
+				$.fn.serializeObject = function()
 				{
 				    var o = {};
 				    var a = this.serializeArray();

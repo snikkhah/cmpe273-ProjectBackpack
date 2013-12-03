@@ -22,8 +22,5 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="C:/workspace/cmpe273-projectPhase1/mongo-java-driver-2.11.3.jar"/>
-	<classpathentry kind="lib" path="C:/workspace/cmpe273-projectPhase1/mongo-java-driver-2.11.3-javadoc.jar"/>
-	<classpathentry kind="lib" path="C:/workspace/cmpe273-projectPhase1/mongo-java-driver-2.11.3-sources.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>
