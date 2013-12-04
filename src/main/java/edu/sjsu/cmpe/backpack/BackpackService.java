@@ -8,6 +8,11 @@ import edu.sjsu.cmpe.backpack.api.resources.BackpackResource;
 import edu.sjsu.cmpe.backpack.api.resources.RootResource;
 import edu.sjsu.cmpe.backpack.config.LibraryServiceConfiguration;
 
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.server.session.HashSessionIdManager;
+import org.eclipse.jetty.server.session.HashSessionManager;
+import org.eclipse.jetty.server.session.SessionHandler;
 
 public class BackpackService extends Service<LibraryServiceConfiguration> {
     public static void main(String[] args) throws Exception {
@@ -27,5 +32,10 @@ public class BackpackService extends Service<LibraryServiceConfiguration> {
 	/** Books APIs */
 	environment.addResource(BackpackResource.class);
 
+//	All the codes that are to handle Sessions
+	HashSessionManager manager = new HashSessionManager();
+	SessionHandler sessions = new SessionHandler(manager);
+	environment.setSessionHandler(sessions);
+	
     }
 }

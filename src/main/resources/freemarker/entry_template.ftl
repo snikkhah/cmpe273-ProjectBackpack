@@ -22,7 +22,7 @@
 							<td>${user.email}</td>
 							<td>${user.status}</td>
 							<td>${user.designation}</td>
-							<td><button id="${user.userID}" type="button" class="btn btn-primary">Report Lost</button></td>
+							<td><button id="${user.userID}" type="button" class="btn btn-danger">Delete User</button></td>
                         </tr>
                         </#list>
                     
@@ -36,6 +36,11 @@
             <!-- Latest compiled and minified JavaScript -->
             <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
             <!-- application ui scripts -->
-			<script src="../assets/js/app.js"></script>
+            <script>
+             $('button').click(function() {
+			    var s = this.id;
+			    alert("prankID "+s+"\nHahaHa You fell for it!");
+		  	});
+            </script>
         </body>
 </html>

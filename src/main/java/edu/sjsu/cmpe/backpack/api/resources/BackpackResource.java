@@ -8,13 +8,24 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
@@ -22,9 +33,12 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
+import javax.ws.rs.core.UriBuilder;
 
 import com.mongodb.MongoClient;
 import com.mongodb.DB;
@@ -35,10 +49,9 @@ import com.mongodb.DBCursor;
 import com.sun.jersey.core.header.FormDataContentDisposition;
 import com.sun.jersey.multipart.FormDataParam;
 import com.yammer.metrics.annotation.Timed;
-import com.yammer.metrics.core.HealthCheck.Result;
 
 import edu.sjsu.cmpe.backpack.domain.User;
-import edu.sjsu.cmpe.backpack.domain.UserFile;
+import edu.sjsu.cmpe.backpack.domain.SessionDAO;
 import edu.sjsu.cmpe.backpack.dto.LinkDto;
 import edu.sjsu.cmpe.backpack.dto.LinksDto;
 import freemarker.template.Configuration;
@@ -46,10 +59,6 @@ import freemarker.template.SimpleHash;
 import freemarker.template.Template;
 import freemarker.template.TemplateModelException;
 
-import java.util.*;
-import javax.mail.*;
-import javax.mail.internet.*;
-import javax.activation.*;
 
 	@Path("/v1/users")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -61,6 +70,7 @@ import javax.activation.*;
 		private Configuration cfg;
 		private Template template;
 		private String dirRootPath;
+		private SessionDAO sessionDAO;
 	    public BackpackResource() {
 	    	try {
 				mongoClient = new MongoClient( "localhost" , 27017 );
@@ -71,6 +81,7 @@ import javax.activation.*;
 	    	db = mongoClient.getDB( "backPack" );
 	    	colluser = db.getCollection("users");
 	    	colldocument = db.getCollection("files");
+	    	sessionDAO = new SessionDAO(db);
 	    	cfg = createFreemarkerConfiguration();
 	    	String os = System.getProperty("os.name");
 	    	if (os.toLowerCase().contains("windows")){
@@ -147,6 +158,7 @@ import javax.activation.*;
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+    	
     	return Response.status(200).entity(output.toString()).build();
     }
 
@@ -277,7 +289,7 @@ import javax.activation.*;
     @Consumes(MediaType.APPLICATION_JSON)
 //    @Produces(MediaType.TEXT_PLAIN)
     @Timed(name = "login-user")
-    public Response login(User user) {
+    public Response login(User user,@Context HttpServletRequest req) {
     	Writer output = new StringWriter();
     	BasicDBObject query = new BasicDBObject("email",user.getEmail());
     	DBObject cursor = colluser.findOne(query);
@@ -293,20 +305,35 @@ import javax.activation.*;
 			if (!pass.equals(user.getPassword())){
     			status = 401;
 			}
+			else {
+				HttpSession session= req.getSession(true);
+		    	Object foo = session.getAttribute("session");
+//		    	if (foo!=null) {
+//		    		System.out.println(foo.toString());
+//		    	} else {
+		    		String sessionID = sessionDAO.startSession(user.getEmail());
+		            System.out.println("Session ID is\t" + sessionID);
+		    		session.setAttribute("session", sessionID);
+//		    	}
+			}
 //			root.put("password_error", error);
 			template.process(root, output);
     	} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+//    	Session Check
+    	
     	return Response.status(status).entity(userID).build();
     }
     @ GET
     @Path("/{userID}")
     @Produces(MediaType.TEXT_HTML)
     @Timed(name = "view-user")
-    public Response getUserByUID(@PathParam("userID") int uID) {
-    	DBObject user = colluser.findOne(new BasicDBObject().append("userID", uID ));
+    public Response getUserByUID(@PathParam("userID") int userID,@Context HttpServletRequest req) {
+		checkSession(userID, req);
+		
+    	BasicDBObject user = (BasicDBObject) colluser.findOne(new BasicDBObject().append("userID", userID ));        
     	Writer output = new StringWriter();
 
     	try {
@@ -320,14 +347,15 @@ import javax.activation.*;
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+
     	return Response.status(200).entity(output.toString()).build();
     }
     
     @DELETE
     @Path("/{userID}")
     @Timed(name = "delete-user")
-    public Response deleteUserByEmail(@PathParam("userID") int userID) {
-
+    public Response deleteUserByEmail(@PathParam("userID") int userID, @Context HttpServletRequest req) {
+    	checkSession(userID, req);
     	BasicDBObject user = new BasicDBObject();
     	user.put("userID", userID);
     	colldocument.remove(new BasicDBObject("owner",userID));
@@ -339,8 +367,9 @@ import javax.activation.*;
     @PUT
     @Path("/{userID}")
     @Timed(name = "update-userdata")
-    public void updateUserdataByUserID(@PathParam("userID") int userID,@QueryParam("firstName") String firstName,@QueryParam("lastName") String lastName,@QueryParam("password") String password,@QueryParam("email") String email,@QueryParam("status") String status,@QueryParam("designation") String designation) {
+    public void updateUserdataByUserID(@Context HttpServletRequest req,@PathParam("userID") int userID,@QueryParam("firstName") String firstName,@QueryParam("lastName") String lastName,@QueryParam("password") String password,@QueryParam("email") String email,@QueryParam("status") String status,@QueryParam("designation") String designation) {
 	// FIXME - Dummy code
+    	checkSession(userID, req);
 	   BasicDBObject ob = new BasicDBObject();
 	   if(firstName != null)
    	ob.append("firstName", firstName);
@@ -365,8 +394,8 @@ import javax.activation.*;
     @Path("/{userID}/files/createFile")
     @Produces(MediaType.TEXT_HTML)
     @Timed(name = "Create-file")
-    public Response createFilePage(@PathParam("userID") int userID) {
-    	
+    public Response createFilePage(@Context HttpServletRequest req,@PathParam("userID") int userID) {
+    	checkSession(userID, req);
     	DBObject user = colluser.findOne(new BasicDBObject("userID",userID));
     	Writer output = new StringWriter();
 
@@ -393,9 +422,10 @@ import javax.activation.*;
     @Path("/{userID}/files")
     @Consumes({MediaType.MULTIPART_FORM_DATA,MediaType.APPLICATION_JSON})
     @Timed(name = "create-file")
-    public Response createUserFileByUserID(@PathParam("userID") int userID, /*@FormParam("accessType") String ss,*/@FormDataParam("file") InputStream inputStream,
+    public Response createUserFileByUserID(@Context HttpServletRequest req,@PathParam("userID") int userID, /*@FormParam("accessType") String ss,*/@FormDataParam("file") InputStream inputStream,
             @FormDataParam("file") FormDataContentDisposition contentDisposition) throws IOException {
 	// FIXME - Dummy code
+    	checkSession(userID, req);
     	int response = 201;
     	if (contentDisposition.getFileName().equals("")){
     		response = 406;
@@ -496,7 +526,8 @@ import javax.activation.*;
     @Path("/{userID}/files")
     @Produces(MediaType.TEXT_HTML)
     @Timed(name = "Get-myfiles")
-    public Response getMyFilesByUserID(@PathParam("userID") int userID) {
+    public Response getMyFilesByUserID(@Context HttpServletRequest req,@PathParam("userID") int userID) {
+    	checkSession(userID, req);
     	BasicDBObject query = new BasicDBObject().append("owner",userID);
     	BasicDBObject fields = new BasicDBObject();
 
@@ -536,8 +567,9 @@ import javax.activation.*;
     @PUT
 	@Path("/{userID}/files/{id}")
 	@Timed(name = "update-UserFiles")
-	public Response updateFileByEmail(@PathParam("userID") int userID, @PathParam("id") int fileID,
+	public Response updateFileByEmail(@Context HttpServletRequest req,@PathParam("userID") int userID, @PathParam("id") int fileID,
 			@QueryParam("sharedWith") String sharedWithID,@QueryParam("accessType") String accessType) {
+    	checkSession(userID, req);
     	int responseCode=200;
 		boolean result = checkOwnerOfFile(userID,fileID);
 		if(result){
@@ -580,7 +612,8 @@ import javax.activation.*;
        @Path("/{userID}/files/{id}")
        @Produces("text/plain")
        @Timed(name = "view-file")
-       public Response getMyFileByUserIdById(@PathParam("userID") int userID, @PathParam("id") int id) {
+       public Response getMyFileByUserIdById(@Context HttpServletRequest req,@PathParam("userID") int userID, @PathParam("id") int id) {
+    	checkSession(userID, req);
     	BasicDBObject result=null;
     	if(checkOwnerOfFile(userID,id)){
        		BasicDBObject query = new BasicDBObject("fileID",id);
@@ -603,7 +636,8 @@ import javax.activation.*;
     @Path("/{userID}/files/{id}")
 //    @Consumes(MediaType.APPLICATION_JSON)
     @Timed(name = "delete-file")
-    public Response deleteMyFileByUserIdAndId(@PathParam("userID") int userID, @PathParam("id") Integer id) {
+    public Response deleteMyFileByUserIdAndId(@Context HttpServletRequest req,@PathParam("userID") int userID, @PathParam("id") Integer id) {
+    	checkSession(userID, req);
     	int response = 200;
     	if(checkOwnerOfFile(userID,id)){    	
 //    		System.out.println("userId has permission to delete the file");
@@ -629,8 +663,8 @@ import javax.activation.*;
     @Path("/{userID}/publicfiles/{id}")
     @Produces("text/plain")
     @Timed(name = "view-filesShared")
-    public Response getPublicFilesByEmailById(@PathParam("userID") int userID, @PathParam("id") int fileID) {
-
+    public Response getPublicFilesByEmailById(@Context HttpServletRequest req,@PathParam("userID") int userID, @PathParam("id") int fileID) {
+    	checkSession(userID, req);
     	BasicDBObject andQuery = new BasicDBObject();
     	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
     	obj.add(new BasicDBObject("fileID", fileID));
@@ -651,8 +685,8 @@ import javax.activation.*;
     @Path("/{userID}/filesShared/{id}")
     @Produces("text/plain")
     @Timed(name = "view-filesShared")
-    public Response getFilesSharedByEmailById(@PathParam("userID") int userID, @PathParam("id") int fileID) {
-
+    public Response getFilesSharedByEmailById(@Context HttpServletRequest req,@PathParam("userID") int userID, @PathParam("id") int fileID) {
+    	checkSession(userID, req);
     	BasicDBObject andQuery = new BasicDBObject();
     	List<BasicDBObject> obj = new ArrayList<BasicDBObject>();
     	obj.add(new BasicDBObject("fileID", fileID));
@@ -674,7 +708,8 @@ import javax.activation.*;
     @Path("/{userID}/filesShared")
     @Produces(MediaType.TEXT_HTML)
     @Timed(name = "Get-filesshared")
-    public Response getSharedFilesByUserID(@PathParam("userID") int userID) {
+    public Response getSharedFilesByUserID(@Context HttpServletRequest req, @PathParam("userID") int userID) {
+    	checkSession(userID, req);
     	BasicDBObject query = new BasicDBObject().append("sharedWith",userID);
     	BasicDBObject fields = new BasicDBObject();
     	DBCursor cursor = colldocument.find(query, fields);
@@ -739,8 +774,8 @@ import javax.activation.*;
     @Produces(MediaType.TEXT_HTML)
     @Consumes(MediaType.APPLICATION_JSON)
     @Timed(name = "Search-publicFiles")
-    public Response searchPublicFiles(@PathParam("userID") int userID, SimpleHash input) throws TemplateModelException {
-
+    public Response searchPublicFiles(@Context HttpServletRequest req,@PathParam("userID") int userID, SimpleHash input) throws TemplateModelException {
+    	checkSession(userID, req);
     	BasicDBObject query = new BasicDBObject("name",new BasicDBObject("$regex",input.get("name")).append("$options", 'i')).append("accessType", "Public");
     	DBCursor files = colldocument.find(query);
     	List<DBObject> filesArray = files.toArray();
@@ -769,6 +804,22 @@ import javax.activation.*;
 		}
     	
     	return Response.status(200).entity(output.toString()).build();
+    }
+    
+    @GET
+    @Path("/{userID}/logout")
+    @Produces("text/plain")
+    @Timed(name = "view-filesShared")
+    public Response logoutByEmail(@Context HttpServletRequest req,@PathParam("userID") int userID) {
+    	checkSession(userID, req);
+    	sessionDAO.endSession(getSession(req));
+    	try {
+            URI location = new URI("../backpack/v1/users/login");
+            throw new WebApplicationException(Response.temporaryRedirect(location).build());
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    	return Response.status(200).entity(true).build();
     }
     
     private Configuration createFreemarkerConfiguration() {
@@ -814,4 +865,33 @@ import javax.activation.*;
 
     }
     
+    private String getSession(HttpServletRequest request){
+    
+    	HttpSession session= request.getSession(true);
+    	Object foo = session.getAttribute("session");
+    	if (foo!=null) {
+    		return foo.toString();
+    	}
+    	else 
+    		return null;
+    	
+    }
+    
+    private void checkSession(int userID, HttpServletRequest req){
+    	BasicDBObject user = (BasicDBObject) colluser.findOne(new BasicDBObject().append("userID", userID ));
+    	String session = getSession(req);
+    	String username = "";
+    	if(session!=null)
+    	username = sessionDAO.findUserNameBySessionId(session);
+        if (!username.equals(user.get("email"))) {
+            // looks like a bad request. user is not logged in
+        	try {
+        		req.removeAttribute("session");
+                URI location = new URI("../backpack/v1/users/login");
+                throw new WebApplicationException(Response.temporaryRedirect(location).build());
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

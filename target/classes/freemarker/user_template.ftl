@@ -96,6 +96,7 @@
 					        type: 'DELETE',
 					        success: function(data) {
 					            alert("Your account was successfully deleted!");
+					            window.location = "/backpack/v1/users/login";
 						  	}
 					  	});
 					  }
@@ -107,7 +108,7 @@
 				    });
 				    
 				    $('#logout').click(function() {
-				 window.location = "/backpack/v1/users/login";
+				 window.location = "/backpack/v1/users/${user.userID}/logout";
 				    });
 				    
 				$.fn.serializeObject = function()

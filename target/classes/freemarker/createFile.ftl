@@ -116,13 +116,13 @@
 				    });
 				});
 				
-                                $('#logout').click(function() {
-                                 window.location = "/backpack/v1/users/login";
-                                    });
-                                    
-                            $('#cancelButton').click(function() {
-                                 window.location = "/backpack/v1/users/${userID}";
-                            });                
+                $('#logout').click(function() {
+                 window.location = "/backpack/v1/users/${user.userID}/logout";
+                    });
+                    
+            $('#cancelButton').click(function() {
+                 window.location = "/backpack/v1/users/${userID}";
+            });                
 
 			</script>
         </body>
