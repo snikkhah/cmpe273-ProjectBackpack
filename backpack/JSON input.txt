@@ -1,0 +1,13 @@
+{
+ "firstName" : "Sina",
+ "lastName" : "Nikkhah",
+ "password" : "secret",
+ "email": "abc",
+ "status" : "activated",
+ "designation" : "CEO Not"
+}
+*********************************************************
+{          "name" : "file2",
+	   "owner" : "Sina",
+	   "accessType" : "private"
+}
